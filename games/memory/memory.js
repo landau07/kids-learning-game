@@ -26,7 +26,7 @@ function startMemoryGame() {
 
   const grid = document.getElementById("memoryGrid");
   grid.innerHTML = "";
-  grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+  grid.style.gridTemplateColumns = "repeat(4, 1fr)";
 
   cardValues.forEach((emoji, index) => {
     const card = document.createElement("div");
