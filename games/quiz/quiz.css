@@ -1,0 +1,56 @@
+/* ===== COUNTING GAME SPECIFIC ===== */
+.counting-display {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(4px, 0.8vh, 10px);
+  padding: clamp(3px, 0.6vh, 12px);
+  min-height: 0;
+}
+
+.counting-item {
+  font-size: clamp(1.5rem, 4vh, 3rem);
+  animation: popIn 0.3s ease-out backwards;
+}
+
+.counting-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.counting-item:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.counting-item:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.counting-item:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.counting-item:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.counting-item:nth-child(6) {
+  animation-delay: 0.6s;
+}
+.counting-item:nth-child(7) {
+  animation-delay: 0.7s;
+}
+.counting-item:nth-child(8) {
+  animation-delay: 0.8s;
+}
+.counting-item:nth-child(9) {
+  animation-delay: 0.9s;
+}
+.counting-item:nth-child(10) {
+  animation-delay: 1s;
+}
+
+/* Landscape / short screens */
+@media (max-height: 500px) {
+  .counting-item {
+    font-size: clamp(1.2rem, 4vh, 2rem);
+  }
+  .counting-display {
+    gap: clamp(2px, 0.5vh, 6px);
+    padding: clamp(2px, 0.3vh, 6px);
+  }
+}

@@ -1,0 +1,24 @@
+<!-- Color mixing game screen -->
+<div class="screen" id="mixingScreen">
+  <h1 class="game-title">🎨 מיזוג צבעים 🎨</h1>
+
+  <div class="mixing-container">
+    <div class="mixing-hint" id="mixingHint">
+      👆 בחרו צבע מכל צד וראו מה קורה!
+    </div>
+
+    <div class="mixing-workspace">
+      <div class="mixing-palette" id="mixingPaletteLeft"></div>
+      <span class="mixing-plus">+</span>
+      <div class="mixing-result" id="mixingResult">?</div>
+      <span class="mixing-equals">=</span>
+      <div class="mixing-palette" id="mixingPaletteRight"></div>
+    </div>
+
+    <div class="mixing-result-name" id="mixingResultName"></div>
+
+    <button class="mixing-reset-btn" onclick="resetMixing()">
+      🔄 נסו שוב!
+    </button>
+  </div>
+</div>

@@ -1,0 +1,61 @@
+/* ===== CELEBRATION SCREEN ===== */
+.celebration {
+  text-align: center;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  gap: clamp(4px, 1vh, 15px);
+}
+
+.celebration-emoji {
+  font-size: clamp(3rem, 10vh, 7rem);
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.celebration-text {
+  font-size: clamp(1.2rem, 3.5vh, 2.5rem);
+  margin: 0.5vh 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  white-space: pre-line;
+}
+
+.celebration-text.celebration-score {
+  font-size: clamp(0.9rem, 2.2vh, 1.6rem);
+}
+
+.play-again-btn {
+  background: white;
+  border: none;
+  border-radius: clamp(12px, 1.5vw, 25px);
+  padding: clamp(10px, 2vh, 20px) clamp(20px, 4vw, 45px);
+  font-size: clamp(1.1rem, 2.5vh, 1.8rem);
+  font-weight: bold;
+  color: #667eea;
+  margin-top: 1vh;
+  transition: all 0.3s;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  min-height: clamp(45px, 6vh, 65px);
+}
+
+.play-again-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Landscape / short screens */
+@media (max-height: 500px) {
+  .celebration-emoji {
+    font-size: clamp(2rem, 8vh, 4rem);
+  }
+  .celebration-text {
+    font-size: clamp(1rem, 3vh, 1.8rem);
+    margin: 0.3vh 0;
+  }
+  .play-again-btn {
+    min-height: clamp(30px, 5vh, 45px);
+    padding: clamp(6px, 1vh, 12px) clamp(15px, 3vw, 30px);
+  }
+}

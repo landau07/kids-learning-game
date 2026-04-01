@@ -1,0 +1,57 @@
+<!-- Star race game screen (2 players) -->
+<div class="screen" id="raceScreen">
+  <h1 class="game-title">🏁 מירוץ כוכבים 🏁</h1>
+
+  <div class="race-container">
+    <div class="race-players">
+      <div class="race-player active-player" id="racePlayer1">
+        <span class="race-player-emoji">👧</span>
+        <span>שחקנית 1</span>
+        <div class="race-player-score" id="raceScore1">⭐ 0</div>
+      </div>
+      <div class="race-player" id="racePlayer2">
+        <span class="race-player-emoji">👧</span>
+        <span>שחקנית 2</span>
+        <div class="race-player-score" id="raceScore2">⭐ 0</div>
+      </div>
+    </div>
+
+    <div class="race-track">
+      <div class="race-lane">
+        <span class="race-lane-label">👧</span>
+        <div class="race-lane-bg">
+          <div
+            class="race-lane-fill player1"
+            id="raceLane1"
+            style="width: 0%"
+          ></div>
+          <span class="race-runner" id="raceRunner1" style="left: 0%">🌟</span>
+          <span class="race-finish">🏆</span>
+        </div>
+      </div>
+      <div class="race-lane">
+        <span class="race-lane-label">👧</span>
+        <div class="race-lane-bg">
+          <div
+            class="race-lane-fill player2"
+            id="raceLane2"
+            style="width: 0%"
+          ></div>
+          <span class="race-runner" id="raceRunner2" style="left: 0%">🌟</span>
+          <span class="race-finish">🏆</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="race-turn-indicator" id="raceTurnIndicator">
+      👧 תור שחקנית 1!
+    </div>
+
+    <div class="race-question-box" id="raceQuestionBox">
+      <div class="race-question-text" id="raceQuestionText"></div>
+      <div class="race-question-main" id="raceQuestionMain"></div>
+    </div>
+
+    <div class="race-answers" id="raceAnswersGrid"></div>
+  </div>
+</div>
