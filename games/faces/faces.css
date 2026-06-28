@@ -1,0 +1,370 @@
+/* ===== FACE CONTEST GAME ===== */
+/* Family expression contest – everyone in one frame, scored locally. */
+
+/* ---- Persistent privacy footer (always visible on the faces screen) ---- */
+.faces-privacy-footer {
+  margin-top: 0.8rem;
+  font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+  color: #00b894;
+  text-align: center;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 14px;
+  padding: 0.4rem 0.9rem;
+  max-width: 700px;
+}
+
+/* ---- Generic faces screen layout ---- */
+#facesScreen .faces-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ---- Setup phase (player names / loading) ---- */
+.faces-setup {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 30px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 700px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.faces-setup-title {
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  color: #6c5ce7;
+  margin-bottom: 0.5rem;
+}
+
+.faces-setup-sub {
+  font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+.faces-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.faces-player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  justify-content: center;
+}
+
+.faces-player-row .faces-player-emoji {
+  font-size: 2rem;
+}
+
+.faces-player-input {
+  font-family: inherit;
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  padding: 0.6rem 1rem;
+  border: 3px solid #b2bec3;
+  border-radius: 16px;
+  text-align: center;
+  width: min(60vw, 300px);
+  direction: rtl;
+}
+
+.faces-player-input:focus {
+  outline: none;
+  border-color: #6c5ce7;
+}
+
+.faces-player-remove {
+  background: #ff7675;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.faces-add-player-btn {
+  background: #74b9ff;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  padding: 0.6rem 1.4rem;
+  font-family: inherit;
+  font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+}
+
+.faces-big-btn {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 1rem 2.5rem;
+  font-family: inherit;
+  font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+  transition: transform 0.15s;
+}
+
+.faces-big-btn:hover {
+  transform: scale(1.05);
+}
+
+.faces-big-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.faces-status {
+  font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+  color: #6c5ce7;
+  margin-top: 1rem;
+  min-height: 1.5rem;
+}
+
+.faces-privacy-note {
+  font-size: 0.85rem;
+  color: #00b894;
+  margin-top: 1rem;
+}
+
+/* ---- Camera / video stage ---- */
+.faces-stage {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.faces-video,
+.faces-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* mirror so it feels like a mirror */
+  transform: scaleX(-1);
+}
+
+.faces-video {
+  object-fit: cover;
+}
+
+/* ---- Prompt (target expression) ---- */
+.faces-prompt {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
+  padding: 0.8rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.faces-prompt-label {
+  font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+  color: #555;
+}
+
+.faces-prompt-expression {
+  font-size: clamp(1.8rem, 6vw, 3rem);
+  font-weight: bold;
+  color: #6c5ce7;
+}
+
+.faces-prompt-emoji {
+  font-size: clamp(2.5rem, 9vw, 5rem);
+}
+
+.faces-round-info {
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  color: #fff;
+  background: rgba(108, 92, 231, 0.85);
+  border-radius: 16px;
+  padding: 0.4rem 1.2rem;
+}
+
+/* ---- Countdown overlay ---- */
+.faces-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(5rem, 25vw, 14rem);
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.faces-countdown.capturing {
+  font-size: clamp(2rem, 8vw, 4rem);
+  color: #ff7675;
+}
+
+/* ---- Round results ---- */
+.faces-results {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 30px;
+  padding: 1.5rem 2rem;
+  width: 100%;
+  max-width: 700px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.faces-results-title {
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  color: #6c5ce7;
+  margin-bottom: 1rem;
+}
+
+.faces-result-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  border-radius: 18px;
+  margin-bottom: 0.6rem;
+  background: #f1f2f6;
+  animation: facesRowIn 0.4s ease both;
+}
+
+@keyframes facesRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.faces-result-row.rank-1 {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+}
+.faces-result-row.rank-2 {
+  background: linear-gradient(135deg, #dfe6e9, #b2bec3);
+}
+.faces-result-row.rank-3 {
+  background: linear-gradient(135deg, #fab1a0, #e17055);
+}
+
+.faces-result-medal {
+  font-size: 2rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+}
+
+.faces-result-name {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  font-weight: bold;
+  flex: 1;
+  text-align: right;
+}
+
+.faces-result-score {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  font-weight: bold;
+  color: #6c5ce7;
+}
+
+.faces-result-bar-wrap {
+  flex: 1.5;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  height: 16px;
+  overflow: hidden;
+}
+
+.faces-result-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+  border-radius: 10px;
+  width: 0%;
+  transition: width 0.8s ease;
+}
+
+/* ---- Scoreboard (cumulative) ---- */
+.faces-scoreboard {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 30px;
+  padding: 1rem 1.5rem;
+  width: 100%;
+  max-width: 700px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.faces-scoreboard-title {
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  color: #555;
+  text-align: center;
+  margin-bottom: 0.8rem;
+}
+
+.faces-scoreboard-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 2px dashed #dfe6e9;
+}
+
+.faces-scoreboard-row:last-child {
+  border-bottom: none;
+}
+
+.faces-scoreboard-rank {
+  font-size: 1.5rem;
+  width: 2.2rem;
+  flex-shrink: 0;
+}
+
+.faces-scoreboard-name {
+  flex: 1;
+  font-size: clamp(0.95rem, 2.8vw, 1.3rem);
+  font-weight: bold;
+  text-align: right;
+}
+
+.faces-scoreboard-total {
+  font-size: clamp(0.95rem, 2.8vw, 1.3rem);
+  font-weight: bold;
+  color: #6c5ce7;
+}
+
+/* ---- Final winner ---- */
+.faces-winner {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  color: #6c5ce7;
+  font-weight: bold;
+  margin: 1rem 0;
+}
+
+.faces-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}

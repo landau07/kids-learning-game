@@ -18,6 +18,7 @@ This is a fun, colorful, and interactive web-based game collection built specifi
 | 🏁 **Star Race**    | Two-player race with mixed questions       |
 | 🌦️ **Seasons**      | Match items to their season                |
 | 🎨 **Color Mixing** | Mix two colors and see the result          |
+| 😄 **Face Contest** | Family expression contest using the webcam |
 
 ## How to Run
 
@@ -28,9 +29,52 @@ This is a fun, colorful, and interactive web-based game collection built specifi
    ```
 3. Open `http://localhost:8080` in your browser
 
+## 😄 Face Contest Game
+
+A camera-based party game for the whole family. The whole family stands together
+in front of the webcam, a target expression is shown (e.g. "Surprised 😲"), and
+during a short 3-second capture window the app scores how well each person
+matches it. Faces are mapped to players by their position in the frame
+(left → right), set once at the start. After each round you see the round ranking
+and a running scoreboard; at the end a winner is crowned.
+
+### 🔒 Privacy
+
+**No image or video ever leaves the device.** All face detection and expression
+scoring runs entirely in the browser via [`face-api.js`](https://github.com/vladmandic/face-api).
+The only network access is a one-time download of the small model files.
+
+### Webcam notes
+
+- The browser will ask for camera permission the first time you play.
+- The page must be served over `http://localhost` (or `https://`) — opening it
+  via `file://` will block camera access.
+
+### Running fully offline (optional)
+
+By default the model files load from a CDN, with an automatic fallback. To run
+100% offline, download the model files into `games/faces/models/`:
+
+```bash
+mkdir -p games/faces/models
+cd games/faces/models
+BASE="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model"
+for f in \
+  tiny_face_detector_model-weights_manifest.json \
+  tiny_face_detector_model.bin \
+  face_expression_model-weights_manifest.json \
+  face_expression_model.bin; do
+  curl -O "$BASE/$f"
+done
+```
+
+The game checks `games/faces/models/` first and falls back to the CDN if the
+files are missing.
+
 ## Tech Stack
 
-- Pure HTML, CSS, and JavaScript — no frameworks or dependencies
+- Pure HTML, CSS, and JavaScript — no frameworks or build step
+- In-browser face detection via face-api.js (loaded from CDN) for the Face Contest game
 - Responsive design that fits any screen without scrolling
 - Custom cursor and sound effects using the Web Audio API
 - RTL (right-to-left) layout for Hebrew

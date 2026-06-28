@@ -67,6 +67,10 @@ function startGame(type) {
     startMixingGame();
     return;
   }
+  if (type === "faces") {
+    startFacesGame();
+    return;
+  }
 
   // Generic quiz games: letters, math, counting
   updateScore();

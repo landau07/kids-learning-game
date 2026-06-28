@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="games/seasons/seasons.css" />
     <link rel="stylesheet" href="games/mixing/mixing.css" />
     <link rel="stylesheet" href="games/race/race.css" />
+    <link rel="stylesheet" href="games/faces/faces.css" />
     <link rel="stylesheet" href="games/celebration/celebration.css" />
   </head>
   <body>
@@ -81,6 +82,10 @@
           <button class="menu-btn mixing-btn" onclick="startGame('mixing')">
             <span class="menu-btn-icon">🎨</span>
             <span>מיזוג צבעים</span>
+          </button>
+          <button class="menu-btn faces-btn" onclick="startGame('faces')">
+            <span class="menu-btn-icon">😄</span>
+            <span>תחרות פרצופים 👨‍👩‍👧‍👧</span>
           </button>
         </div>
       </div>
@@ -280,6 +285,15 @@
           </div>
         </div>
 
+        <!-- Face contest game screen (family, camera-based, all local) -->
+        <div class="screen" id="facesScreen">
+          <div class="faces-container" id="facesContainer"></div>
+          <div class="faces-privacy-footer">
+            🔒 הפרצופים המצולמים מנותחים אך ורק במחשב שלכם — שום תמונה או סרטון
+            לא נשלחים ולא עוזבים את המחשב.
+          </div>
+        </div>
+
         <!-- Celebration screen -->
         <div class="screen" id="celebrationScreen">
           <div class="celebration">
@@ -301,6 +315,9 @@
     <script src="common/utils.js"></script>
     <script src="common/data.js"></script>
 
+    <!-- face-api.js (for the face contest game). Runs 100% in-browser. -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+
     <!-- Per-game logic -->
     <script src="games/letters/letters.js"></script>
     <script src="games/math/math.js"></script>
@@ -310,6 +327,7 @@
     <script src="games/seasons/seasons.js"></script>
     <script src="games/mixing/mixing.js"></script>
     <script src="games/race/race.js"></script>
+    <script src="games/faces/faces.js"></script>
 
     <!-- Main app (loaded last – sets up cursor, routing, keyboard) -->
     <script src="app.js"></script>
