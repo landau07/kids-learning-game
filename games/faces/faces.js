@@ -1,8 +1,10 @@
 // ===== FACE CONTEST GAME (FAMILY) =====
-// Everyone stands in one frame. Each round a target expression is shown.
-// For ~3 seconds the webcam is sampled locally with face-api.js. Each detected
-// face gets its best score for the requested expression. Faces are mapped to
-// players by horizontal position (left -> right), set once at calibration.
+// Everyone stands in one frame. At the start we take ONE calibration photo and
+// crop each detected face into a thumbnail – those thumbnails ARE the players
+// (no names needed). Each round a target expression is shown; for ~3 seconds
+// the webcam is sampled locally with face-api.js and each face gets its best
+// score for the requested expression. Faces are mapped to players by horizontal
+// position (left -> right), fixed at calibration time.
 //
 // PRIVACY: all detection runs in the browser. No frame, image or video ever
 // leaves the device. The only network access is the one-time download of the
@@ -15,11 +17,14 @@
 const FACES_MODEL_URL_LOCAL = "games/faces/models";
 const FACES_MODEL_URL_CDN =
   "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+
 const FACES_TOTAL_ROUNDS = 5;
 const FACES_COUNTDOWN_SECONDS = 3;
 const FACES_CAPTURE_MS = 3000; // capture window length
 const FACES_CAPTURE_INTERVAL_MS = 200; // how often we sample during capture
-const FACES_PLAYER_EMOJIS = ["👩", "👨", "👧", "👦", "🧒", "👵"];
+const FACES_THUMB_SIZE = 96; // px – size of each cropped face thumbnail
+const FACES_THUMB_PADDING = 0.35; // extra margin around the face box when cropping
+const FACES_MAX_PLAYERS = 6;
 
 // Expressions face-api can detect, with Hebrew labels + emoji prompts.
 // NOTE: each `key` MUST exactly match a field name emitted by face-api's
@@ -48,7 +53,7 @@ const FACES_EXPRESSIONS = [
 // ---- State ----
 let facesModelsLoaded = false;
 let facesStream = null;
-let facesPlayers = []; // [{ name, emoji, total }]
+let facesPlayers = []; // [{ thumb (dataURL), total }]
 let facesRound = 0;
 let facesRoundExpressions = []; // chosen expression per round
 let facesPhase = "setup"; // setup | calibrate | countdown | capture | results | final
@@ -65,101 +70,36 @@ function facesEscapeHtml(str) {
 function startFacesGame() {
   facesPhase = "setup";
   facesRound = 0;
-  // default two players: parent + child, editable in the UI
-  facesPlayers = [
-    { name: "אמא", emoji: FACES_PLAYER_EMOJIS[0], total: 0 },
-    { name: "אבא", emoji: FACES_PLAYER_EMOJIS[1], total: 0 },
-  ];
+  facesPlayers = [];
   showScreen("facesScreen");
   renderFacesSetup();
 }
 
 // ===== SETUP UI =====
+// A single button that loads models + camera, then moves to calibration.
 function renderFacesSetup() {
   const container = document.getElementById("facesContainer");
   container.innerHTML = `
     <div class="faces-setup">
       <div class="faces-setup-title">😄 תחרות פרצופים 😄</div>
       <div class="faces-setup-sub">
-        עמדו יחד מול המצלמה לפי הסדר (משמאל לימין). הזינו את השמות:
+        כולם יעמדו יחד מול המצלמה. נצלם תמונה אחת שתזהה את הפרצופים —
+        ואז כל אחד יקבל ניקוד לפי הפרצוף שלו!
       </div>
-      <div class="faces-players-list" id="facesPlayersList"></div>
-      <button class="faces-add-player-btn" id="facesAddBtn">➕ הוסף שחקן</button>
       <div>
-        <button class="faces-big-btn" id="facesStartBtn">🎥 התחילו!</button>
+        <button class="faces-big-btn" id="facesStartBtn">🎥 הפעילו מצלמה</button>
       </div>
       <div class="faces-status" id="facesStatus"></div>
     </div>
   `;
 
-  renderFacesPlayerRows();
-
-  document.getElementById("facesAddBtn").onclick = () => {
-    if (facesPlayers.length >= FACES_PLAYER_EMOJIS.length) return;
-    facesPlayers.push({
-      name: "",
-      emoji: FACES_PLAYER_EMOJIS[facesPlayers.length],
-      total: 0,
-    });
-    renderFacesPlayerRows();
-  };
-
-  document.getElementById("facesStartBtn").onclick = beginFacesGame;
+  document.getElementById("facesStartBtn").onclick = beginFacesCalibration;
 }
 
-function renderFacesPlayerRows() {
-  const list = document.getElementById("facesPlayersList");
-  list.innerHTML = "";
-  facesPlayers.forEach((player, i) => {
-    const row = document.createElement("div");
-    row.className = "faces-player-row";
-
-    const emojiSpan = document.createElement("span");
-    emojiSpan.className = "faces-player-emoji";
-    emojiSpan.textContent = player.emoji;
-
-    // Build the input as a DOM node and set `value` as a property so the name
-    // is never parsed as HTML (prevents XSS and broken quotes on re-render).
-    const input = document.createElement("input");
-    input.className = "faces-player-input";
-    input.type = "text";
-    input.maxLength = 12;
-    input.placeholder = "שם השחקן";
-    input.value = player.name;
-    input.oninput = (e) => {
-      facesPlayers[i].name = e.target.value;
-    };
-
-    row.appendChild(emojiSpan);
-    row.appendChild(input);
-
-    if (facesPlayers.length > 1) {
-      const removeBtn = document.createElement("button");
-      removeBtn.className = "faces-player-remove";
-      removeBtn.textContent = "✕";
-      removeBtn.onclick = () => {
-        facesPlayers.splice(i, 1);
-        // re-assign emojis in order
-        facesPlayers.forEach((p, idx) => (p.emoji = FACES_PLAYER_EMOJIS[idx]));
-        renderFacesPlayerRows();
-      };
-      row.appendChild(removeBtn);
-    }
-
-    list.appendChild(row);
-  });
-}
-
-// ===== START: load models + camera =====
-async function beginFacesGame() {
+// ===== START: load models + camera, then show the calibration preview =====
+async function beginFacesCalibration() {
   const status = document.getElementById("facesStatus");
   const startBtn = document.getElementById("facesStartBtn");
-
-  // Normalise: trim names, apply a default only when blank, reset totals.
-  facesPlayers.forEach((p, i) => {
-    p.name = p.name.trim() || `שחקן ${i + 1}`;
-    p.total = 0;
-  });
 
   if (typeof faceapi === "undefined") {
     status.textContent =
@@ -177,21 +117,14 @@ async function beginFacesGame() {
     }
 
     status.textContent = "📷 מבקש גישה למצלמה...";
-    facesStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: 1280, height: 960 },
-      audio: false,
-    });
-
-    // pick the round expressions up front
-    facesRoundExpressions = [];
-    for (let i = 0; i < FACES_TOTAL_ROUNDS; i++) {
-      const ex =
-        FACES_EXPRESSIONS[Math.floor(Math.random() * FACES_EXPRESSIONS.length)];
-      facesRoundExpressions.push(ex);
+    if (!facesStream) {
+      facesStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: 1280, height: 960 },
+        audio: false,
+      });
     }
 
-    facesRound = 0;
-    startFacesRound();
+    renderFacesCalibrate();
   } catch (err) {
     startBtn.disabled = false;
     if (err && err.name === "NotAllowedError") {
@@ -201,6 +134,163 @@ async function beginFacesGame() {
         "⚠️ שגיאה בהפעלת המצלמה/מודלים. ודאו שהדף רץ דרך שרת מקומי (לא file://).";
     }
   }
+}
+
+// ===== CALIBRATION: live preview + "take photo" =====
+function renderFacesCalibrate() {
+  facesPhase = "calibrate";
+  const container = document.getElementById("facesContainer");
+  container.innerHTML = `
+    <div class="faces-round-info">📸 שלב הכנה</div>
+    <div class="faces-prompt">
+      <div class="faces-prompt-label">
+        עמדו יחד מול המצלמה (משמאל לימין) וצלמו תמונה
+      </div>
+    </div>
+    <div class="faces-stage">
+      <video class="faces-video" id="facesVideo" autoplay muted playsinline></video>
+    </div>
+    <div class="faces-actions">
+      <button class="faces-big-btn" id="facesSnapBtn">📸 צלמו!</button>
+    </div>
+    <div class="faces-status" id="facesStatus"></div>
+  `;
+
+  const video = document.getElementById("facesVideo");
+  video.srcObject = facesStream;
+  video.onloadedmetadata = () => video.play();
+
+  document.getElementById("facesSnapBtn").onclick = captureFacesCalibration;
+}
+
+// Detect every face in the current frame, crop each to a thumbnail, and create
+// one player per face ordered left->right (as seen on the mirrored preview).
+async function captureFacesCalibration() {
+  if (currentGame !== "faces" || !facesStream) return;
+  const status = document.getElementById("facesStatus");
+  const snapBtn = document.getElementById("facesSnapBtn");
+  const video = document.getElementById("facesVideo");
+  snapBtn.disabled = true;
+  status.textContent = "🔍 מזהה פרצופים...";
+
+  const options = new faceapi.TinyFaceDetectorOptions({
+    inputSize: 416,
+    scoreThreshold: 0.4,
+  });
+
+  let detections = [];
+  try {
+    detections = await faceapi.detectAllFaces(video, options);
+  } catch (e) {
+    detections = [];
+  }
+
+  if (!detections.length) {
+    snapBtn.disabled = false;
+    status.textContent = "🙁 לא זוהו פרצופים. התקרבו למצלמה ונסו שוב.";
+    return;
+  }
+
+  // Sort by horizontal position. The video is mirrored on screen, so the person
+  // on the user's LEFT appears at a HIGH raw x. Sort ascending then reverse to
+  // get the same left->right order the players see.
+  const ordered = detections
+    .slice()
+    .sort((a, b) => a.box.x - b.box.x)
+    .reverse()
+    .slice(0, FACES_MAX_PLAYERS);
+
+  // Snapshot the current frame once, then crop each face from it.
+  const frame = document.createElement("canvas");
+  frame.width = video.videoWidth;
+  frame.height = video.videoHeight;
+  frame.getContext("2d").drawImage(video, 0, 0, frame.width, frame.height);
+
+  facesPlayers = ordered.map((det) => ({
+    thumb: cropFaceThumbnail(frame, det.box),
+    total: 0,
+  }));
+
+  renderFacesCalibrationReview();
+}
+
+// Crop a square thumbnail around a face box (with padding) from the frame canvas.
+function cropFaceThumbnail(frame, box) {
+  const pad = box.width * FACES_THUMB_PADDING;
+  let sx = box.x - pad;
+  let sy = box.y - pad;
+  let size = Math.max(box.width, box.height) + pad * 2;
+
+  // Clamp to the frame bounds.
+  sx = Math.max(0, sx);
+  sy = Math.max(0, sy);
+  size = Math.min(size, frame.width - sx, frame.height - sy);
+
+  const out = document.createElement("canvas");
+  out.width = FACES_THUMB_SIZE;
+  out.height = FACES_THUMB_SIZE;
+  const ctx = out.getContext("2d");
+  // Mirror horizontally so the thumbnail matches the mirrored on-screen preview.
+  ctx.translate(FACES_THUMB_SIZE, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(
+    frame,
+    sx,
+    sy,
+    size,
+    size,
+    0,
+    0,
+    FACES_THUMB_SIZE,
+    FACES_THUMB_SIZE,
+  );
+  return out.toDataURL("image/jpeg", 0.85);
+}
+
+// Show the captured faces so the family can confirm or retake.
+function renderFacesCalibrationReview() {
+  const container = document.getElementById("facesContainer");
+  const thumbs = facesPlayers
+    .map(
+      (p, i) => `
+        <div class="faces-thumb-card">
+          <img class="faces-thumb" src="${p.thumb}" alt="פרצוף ${i + 1}" />
+          <span class="faces-thumb-label">${i + 1}</span>
+        </div>`,
+    )
+    .join("");
+
+  const count = facesPlayers.length;
+  const countText = count === 1 ? "זוהה שחקן אחד" : `זוהו ${count} שחקנים`;
+
+  container.innerHTML = `
+    <div class="faces-setup">
+      <div class="faces-setup-title">✅ ${countText}!</div>
+      <div class="faces-setup-sub">אלו הפרצופים שישתתפו בתחרות:</div>
+      <div class="faces-thumbs-row">${thumbs}</div>
+      <div class="faces-actions">
+        <button class="faces-big-btn" id="facesPlayBtn">🎮 שחקו!</button>
+        <button class="faces-big-btn" id="facesRetakeBtn"
+          style="background:linear-gradient(135deg,#fab1a0,#e17055)">🔄 צלמו שוב</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("facesPlayBtn").onclick = beginFacesRounds;
+  document.getElementById("facesRetakeBtn").onclick = renderFacesCalibrate;
+}
+
+// Pick the round expressions and start playing.
+function beginFacesRounds() {
+  facesRoundExpressions = [];
+  for (let i = 0; i < FACES_TOTAL_ROUNDS; i++) {
+    const ex =
+      FACES_EXPRESSIONS[Math.floor(Math.random() * FACES_EXPRESSIONS.length)];
+    facesRoundExpressions.push(ex);
+  }
+  facesPlayers.forEach((p) => (p.total = 0));
+  facesRound = 0;
+  startFacesRound();
 }
 
 // Try local model files first (fully offline); fall back to CDN automatically.
@@ -371,7 +461,7 @@ function showFacesRoundResults(expression, bestByPlayer) {
   const roundResults = facesPlayers.map((player, i) => {
     const points = Math.round((bestByPlayer[i] || 0) * 100);
     player.total += points;
-    return { name: player.name, emoji: player.emoji, points };
+    return { thumb: player.thumb, index: i, points };
   });
 
   // sort descending for ranking
@@ -388,7 +478,7 @@ function showFacesRoundResults(expression, bestByPlayer) {
       return `
         <div class="faces-result-row ${rankClass}" style="animation-delay:${idx * 0.12}s">
           <span class="faces-result-medal">${medal}</span>
-          <span class="faces-result-name">${r.emoji} ${facesEscapeHtml(r.name)}</span>
+          <img class="faces-result-thumb" src="${r.thumb}" alt="פרצוף ${r.index + 1}" />
           <span class="faces-result-bar-wrap">
             <span class="faces-result-bar" data-pct="${barPct}"></span>
           </span>
@@ -432,7 +522,10 @@ function showFacesRoundResults(expression, bestByPlayer) {
 }
 
 function renderFacesScoreboardHTML(title) {
-  const ranked = facesPlayers.slice().sort((a, b) => b.total - a.total);
+  // Keep the original player index so the medal matches each face's standing.
+  const ranked = facesPlayers
+    .map((p, index) => ({ ...p, index }))
+    .sort((a, b) => b.total - a.total);
   const medals = ["🥇", "🥈", "🥉"];
   const rows = ranked
     .map((p, idx) => {
@@ -440,7 +533,7 @@ function renderFacesScoreboardHTML(title) {
       return `
         <div class="faces-scoreboard-row">
           <span class="faces-scoreboard-rank">${rank}</span>
-          <span class="faces-scoreboard-name">${p.emoji} ${facesEscapeHtml(p.name)}</span>
+          <img class="faces-scoreboard-thumb" src="${p.thumb}" alt="פרצוף ${p.index + 1}" />
           <span class="faces-scoreboard-total">⭐ ${p.total}</span>
         </div>`;
     })
@@ -457,22 +550,26 @@ function endFacesGame() {
   facesPhase = "final";
   stopFacesCamera();
 
-  const ranked = facesPlayers.slice().sort((a, b) => b.total - a.total);
+  const ranked = facesPlayers
+    .map((p, index) => ({ ...p, index }))
+    .sort((a, b) => b.total - a.total);
   const winner = ranked[0];
   // handle ties
   const winners = ranked.filter((p) => p.total === winner.total);
-  const winnerText =
-    winners.length > 1
-      ? `תיקו! ${winners
-          .map((w) => `${w.emoji} ${facesEscapeHtml(w.name)}`)
-          .join(" ו")} 🎉`
-      : `🏆 המנצח/ת: ${winner.emoji} ${facesEscapeHtml(winner.name)}!`;
+  const winnerThumbs = winners
+    .map(
+      (w) =>
+        `<img class="faces-winner-thumb" src="${w.thumb}" alt="פרצוף ${w.index + 1}" />`,
+    )
+    .join("");
+  const winnerText = winners.length > 1 ? `תיקו! 🎉` : `🏆 המנצח/ת!`;
 
   const container = document.getElementById("facesContainer");
   container.innerHTML = `
     <div class="faces-results">
       <div class="faces-results-title">🎉 סוף המשחק! 🎉</div>
       <div class="faces-winner">${winnerText}</div>
+      <div class="faces-winner-thumbs">${winnerThumbs}</div>
       ${renderFacesScoreboardHTML("דירוג סופי")}
       <div class="faces-actions">
         <button class="faces-big-btn" id="facesPlayAgainBtn">🔄 שחקו שוב</button>
