@@ -280,17 +280,27 @@ function renderFacesCalibrationReview() {
   document.getElementById("facesRetakeBtn").onclick = renderFacesCalibrate;
 }
 
-// Pick the round expressions and start playing.
+// Pick the round expressions and start playing. Rounds are short, so each
+// expression is used at most once per game (no repeats). There are more
+// expressions than rounds, so a shuffle-and-slice always yields distinct ones.
 function beginFacesRounds() {
-  facesRoundExpressions = [];
-  for (let i = 0; i < FACES_TOTAL_ROUNDS; i++) {
-    const ex =
-      FACES_EXPRESSIONS[Math.floor(Math.random() * FACES_EXPRESSIONS.length)];
-    facesRoundExpressions.push(ex);
-  }
+  facesRoundExpressions = facesShuffle(FACES_EXPRESSIONS).slice(
+    0,
+    FACES_TOTAL_ROUNDS,
+  );
   facesPlayers.forEach((p) => (p.total = 0));
   facesRound = 0;
   startFacesRound();
+}
+
+// Fisher–Yates shuffle returning a new array (does not mutate the input).
+function facesShuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 // Try local model files first (fully offline); fall back to CDN automatically.
