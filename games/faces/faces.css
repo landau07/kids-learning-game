@@ -217,8 +217,34 @@
 }
 
 .faces-countdown.capturing {
-  font-size: clamp(2rem, 8vw, 4rem);
-  color: #ff7675;
+  font-size: clamp(3rem, 12vw, 6rem);
+  color: #fff;
+}
+
+/* ---- Camera flash (vintage snapshot effect) ---- */
+.faces-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.faces-flash.flashing {
+  animation: facesFlash 0.45s ease-out;
+}
+
+@keyframes facesFlash {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* ---- Round results ---- */

@@ -20,8 +20,6 @@ const FACES_MODEL_URL_CDN =
 
 const FACES_TOTAL_ROUNDS = 5;
 const FACES_COUNTDOWN_SECONDS = 3;
-const FACES_CAPTURE_MS = 3000; // capture window length
-const FACES_CAPTURE_INTERVAL_MS = 200; // how often we sample during capture
 const FACES_THUMB_SIZE = 96; // px – size of each cropped face thumbnail
 const FACES_THUMB_PADDING = 0.35; // extra margin around the face box when cropping
 const FACES_MAX_PLAYERS = 6;
@@ -356,6 +354,7 @@ function startFacesRound() {
     <div class="faces-stage">
       <video class="faces-video" id="facesVideo" autoplay muted playsinline></video>
       <div class="faces-countdown" id="facesCountdown"></div>
+      <div class="faces-flash" id="facesFlash"></div>
     </div>
     ${renderFacesScoreboardHTML("לוח התוצאות עד כה")}
   `;
@@ -394,73 +393,133 @@ function runFacesCountdown(expression) {
   }, 1000);
 }
 
-// Sample frames during the capture window and keep each face's best score.
+// Take a SINGLE snapshot at the end of the countdown — like an old camera:
+// shutter sound + a white flash, then one frame is analysed. Rounds are short,
+// so one decisive frame is simpler and snappier than sampling for seconds.
 async function captureFacesRound(expression) {
   facesPhase = "capture";
   const video = document.getElementById("facesVideo");
   const cdEl = document.getElementById("facesCountdown");
   cdEl.classList.add("capturing");
-  cdEl.textContent = "📸 עכשיו!";
+  cdEl.textContent = "📸";
+
+  // Vintage camera feedback: shutter click + flash, fired together.
+  playFacesShutter();
+  triggerFacesFlash();
 
   const options = new faceapi.TinyFaceDetectorOptions({
     inputSize: 416,
     scoreThreshold: 0.4,
   });
 
-  // bestByPlayer[i] = best expression score for the face mapped to player i
+  // bestByPlayer[i] = expression score for the face mapped to player i
   const bestByPlayer = new Array(facesPlayers.length).fill(0);
-  const start = Date.now();
 
-  while (Date.now() - start < FACES_CAPTURE_MS) {
-    // Abort if the user left the game (home/Escape) during the capture window.
-    if (currentGame !== "faces" || !facesStream) return;
+  // Abort if the user left the game (home/Escape) during the snapshot.
+  if (currentGame !== "faces" || !facesStream) return;
 
-    let detections = [];
-    try {
-      detections = await faceapi
-        .detectAllFaces(video, options)
-        .withFaceExpressions();
-    } catch (e) {
-      detections = [];
-    }
-
-    // Score every frame that has at least one detected face. We map faces to
-    // players by horizontal position (left->right as seen on the mirrored
-    // video). Requiring ALL players in every frame was too strict — a single
-    // briefly-missed face meant the whole round scored 0. Now we score the
-    // faces we do have, and only the missing player(s) skip that frame.
-    if (detections.length > 0) {
-      // If more faces are detected than there are players (e.g. a passer-by),
-      // keep only the strongest detections so noise doesn't steal a slot.
-      let usable = detections;
-      if (detections.length > facesPlayers.length) {
-        usable = detections
-          .slice()
-          .sort((a, b) => b.detection.score - a.detection.score)
-          .slice(0, facesPlayers.length);
-      }
-
-      // Sort by horizontal position. Video is mirrored on screen, so the
-      // person standing on the user's LEFT appears at a HIGH x in raw pixels.
-      // We sort raw x ascending and then reverse to match left->right as seen.
-      const sorted = usable
-        .slice()
-        .sort((a, b) => a.detection.box.x - b.detection.box.x)
-        .reverse();
-
-      sorted.forEach((det, idx) => {
-        if (idx >= facesPlayers.length) return;
-        const score = det.expressions[expression.key] || 0;
-        if (score > bestByPlayer[idx]) bestByPlayer[idx] = score;
-      });
-    }
-
-    await facesSleep(FACES_CAPTURE_INTERVAL_MS);
+  let detections = [];
+  try {
+    detections = await faceapi
+      .detectAllFaces(video, options)
+      .withFaceExpressions();
+  } catch (e) {
+    detections = [];
   }
+
+  // Map detected faces to players by horizontal position (left->right as seen
+  // on the mirrored video). If more faces than players are detected (e.g. a
+  // passer-by), keep only the strongest so noise doesn't steal a slot.
+  if (detections.length > 0) {
+    let usable = detections;
+    if (detections.length > facesPlayers.length) {
+      usable = detections
+        .slice()
+        .sort((a, b) => b.detection.score - a.detection.score)
+        .slice(0, facesPlayers.length);
+    }
+
+    // Video is mirrored on screen, so the person on the user's LEFT appears at
+    // a HIGH raw x. Sort ascending then reverse to match left->right as seen.
+    const sorted = usable
+      .slice()
+      .sort((a, b) => a.detection.box.x - b.detection.box.x)
+      .reverse();
+
+    sorted.forEach((det, idx) => {
+      if (idx >= facesPlayers.length) return;
+      bestByPlayer[idx] = det.expressions[expression.key] || 0;
+    });
+  }
+
+  // Brief pause so the flash/shutter is felt before results pop in.
+  await facesSleep(450);
 
   // Final guard: don't render results onto a screen the user already left.
   if (currentGame !== "faces") return;
   showFacesRoundResults(expression, bestByPlayer);
+}
+
+// Old-school camera shutter: a short, bright two-stage click using filtered
+// noise + a quick high "tick". Self-contained Web Audio (no shared assets).
+function playFacesShutter() {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // White-noise burst shaped into two quick clicks (mirror open + close).
+    const dur = 0.18;
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.6;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 3000;
+    bandpass.Q.value = 0.8;
+
+    const noiseGain = ctx.createGain();
+    // two-click envelope: open click, tiny gap, close click
+    noiseGain.gain.setValueAtTime(0.0001, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.5, now + 0.005);
+    noiseGain.gain.exponentialRampToValueAtTime(0.02, now + 0.05);
+    noiseGain.gain.exponentialRampToValueAtTime(0.4, now + 0.09);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.17);
+
+    noise.connect(bandpass);
+    bandpass.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + dur);
+
+    // A short high "tick" on top for the mechanical snap.
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(2200, now);
+    oscGain.gain.setValueAtTime(0.15, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.05);
+  } catch (e) {
+    // Audio not supported — continue silently.
+  }
+}
+
+// White flash overlay over the camera stage (fades out via CSS animation).
+function triggerFacesFlash() {
+  const flash = document.getElementById("facesFlash");
+  if (!flash) return;
+  flash.classList.remove("flashing");
+  // force reflow so the animation can restart on every snapshot
+  void flash.offsetWidth;
+  flash.classList.add("flashing");
 }
 
 // ===== RESULTS =====
